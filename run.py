@@ -25,22 +25,27 @@ def get_energy(rpc, pid):
     while True:
         ret = rpc.call(channel, "sampleAttributes:forPIDs:", attr, {pid})
         # print(ret.selector)
-        if 'energy.gpu.cost' in ret.selector[pid].keys():
-            print("gpu:", ret.selector[pid]['energy.gpu.cost'])
-            gpu_cost = ret.selector[pid]['energy.gpu.cost']
+        if ret.selector and pid in ret.selector:
+            if 'energy.gpu.cost' in ret.selector[pid].keys():
+                print("gpu:", ret.selector[pid]['energy.gpu.cost'])
+                gpu_cost = ret.selector[pid]['energy.gpu.cost']
+            else:
+                gpu_cost = '0'
+
+            if 'energy.cpu.cost' in ret.selector[pid].keys():
+                print("cpu:", ret.selector[pid]['energy.cpu.cost'])
+                cpu_cost = ret.selector[pid]['energy.cpu.cost']
+            else:
+                cpu_cost = '0'
+
+            if 'energy.networking.cost' in ret.selector[pid].keys():
+                print("networking:", ret.selector[pid]['energy.networking.cost'])
+                network_cost = ret.selector[pid]['energy.networking.cost']
+            else:
+                network_cost = '0'
         else:
             gpu_cost = '0'
-
-        if 'energy.cpu.cost' in ret.selector[pid].keys():
-            print("cpu:", ret.selector[pid]['energy.cpu.cost'])
-            cpu_cost = ret.selector[pid]['energy.cpu.cost']
-        else:
             cpu_cost = '0'
-
-        if 'energy.networking.cost' in ret.selector[pid].keys():
-            print("networking:", ret.selector[pid]['energy.networking.cost'])
-            network_cost = ret.selector[pid]['energy.networking.cost']
-        else:
             network_cost = '0'
 
         mysql.insert_eng(gpu_cost, cpu_cost, network_cost)
@@ -49,7 +54,7 @@ def get_energy(rpc, pid):
 
 def get_fps(rpc):
     def callback_fps(res):
-        print('FPS打印', res)
+        # print('FPS打印', res)
         # fps数据
         ss = str(res)
         fps_test = ss.split("'FPS':")[1].split(".")[0]
@@ -68,7 +73,7 @@ def get_temp(td):
         io_registry = diagnostics['IORegistry']
         temperature = io_registry['Temperature']
         temp_float = str(float(temperature) / 100)
-        print("temp:", temp_float)
+        # print("temp:", temp_float)
         mysql.insert_temp(temp_float)
         time.sleep(5)
 
@@ -109,19 +114,19 @@ def start_test():
     def callback(_type: tidevice.DataType, value: dict):
         print(_type, value)
         if _type.value == "cpu":
-            print('CPU打印', value)
+            # print('CPU打印', value)
             ss = str(value)  # 转成str
             use_cpu = ss.split("'value':")[1][0:6].split("}")[0]
             # 数据存数据库连接数据库
             mysql.insert_cpu(use_cpu)
         if _type.value == "memory":
-            print('内存打印', value)
+            # print('内存打印', value)
             ss = str(value)
             memory = ss.split("'value':")[1][0:6].split("}")[0]
             # 数据存数据库连接数据库
             mysql.insert_memory(memory)
         if _type.value == "network":
-            print('网络打印', value)
+            # print('网络打印', value)
             downFlow = value['downFlow']
             upFlow = value['upFlow']
             mysql.insert_net(upFlow, downFlow)
@@ -130,7 +135,7 @@ def start_test():
         #     fps = value['fps']
         #     mysql.insert_fps(fps)
         if _type.value == "gpu":
-            print('GPU', value)
+            # print('GPU', value)
             device = value['device']
             renderer = value['renderer']
             tiler = value['tiler']
@@ -218,7 +223,7 @@ if __name__ == "__main__":
         tidevice_obj = tidevice.Device(device_id)  # iOS设备
 
         MarketName = get_device_info("MarketName")
-        run_id = get_device_info("MarketName") + "_" + datetime.datetime.now().strftime("%m%d_%H%M")
+        run_id = app_bundle_id + "_" + get_device_info("MarketName") + "_" + datetime.datetime.now().strftime("%m%d_%H%M")
 
         mysql = Mysql(mysql_host, mysql_port, mysql_username, mysql_password, mysql_db, run_id)
 
