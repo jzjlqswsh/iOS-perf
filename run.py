@@ -14,6 +14,7 @@ from tidevice._usbmux import Usbmux
 from tidevice._proto import MODELS
 from tidevice._perf import DataType
 from ios_device.servers.Instrument import InstrumentServer
+from ios_device.util.exceptions import InstrumentRPCParseError
 from ios_device import py_ios_device
 
 
@@ -24,8 +25,13 @@ def get_energy(rpc, pid):
     print("start", rpc.call(channel, "startSamplingForPIDs:", {pid}).selector)
     while True:
         ret = rpc.call(channel, "sampleAttributes:forPIDs:", attr, {pid})
-        # print(ret.selector)
-        if ret.selector and pid in ret.selector:
+        print("ret.selector:",ret.selector)
+        if type(ret.selector) is InstrumentRPCParseError:
+            gpu_cost = '0'
+            cpu_cost = '0'
+            network_cost = '0'
+            print("ret.selector:","InstrumentRPCParseError")
+        else:
             if 'energy.gpu.cost' in ret.selector[pid].keys():
                 print("gpu:", ret.selector[pid]['energy.gpu.cost'])
                 gpu_cost = ret.selector[pid]['energy.gpu.cost']
@@ -43,10 +49,6 @@ def get_energy(rpc, pid):
                 network_cost = ret.selector[pid]['energy.networking.cost']
             else:
                 network_cost = '0'
-        else:
-            gpu_cost = '0'
-            cpu_cost = '0'
-            network_cost = '0'
 
         mysql.insert_eng(gpu_cost, cpu_cost, network_cost)
         time.sleep(1)
